@@ -2,7 +2,9 @@ from flask import Flask, request
 import telebot
 import os
 from web3 import Web3
-
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Olá! 👋 Eu sou a Guardiã EuSou. Como posso ajudar-te?")
 app = Flask(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
