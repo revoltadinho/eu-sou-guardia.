@@ -1,37 +1,54 @@
-from flask import Flask
+from flask import Flask, request
+import telebot
 import os
 from web3 import Web3
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# Inicialização do Flask
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return "IA Guardiã EuSou online e funcional."
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# Variáveis de ambiente
+# Lógica de blockchain (opcional nesta fase)
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 RPC_URL = os.getenv("RPC_URL")
-CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 
-# Inicializar Web3
-w3 = Web3(Web3.HTTPProvider(RPC_URL))
+# Ligação à blockchain (opcional nesta fase)
+w3 = Web3(Web3.HTTPProvider(RPC_URL)) if RPC_URL else None
 
-# Verificar conexão com blockchain
-if w3.is_connected():
-    print("✅ Conectado à blockchain BSC com sucesso.")
-else:
-    print("❌ Falha na conexão à blockchain.")
+@app.route('/' + BOT_TOKEN, methods=['POST'])
+def receive_update():
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '', 200
 
-# Função principal da IA
-def main():
-    print("IA Guardiã EuSouCoin iniciada.")
-    account = w3.eth.account.from_key(PRIVATE_KEY)
-    balance = w3.eth.get_balance(account.address)
-    print(f"Saldo da wallet: {w3.from_wei(balance, 'ether')} BNB")
+@app.route('/set_webhook', methods=['GET'])
+def set_webhook():
+    url = f"https://{request.host}/{BOT_TOKEN}"
+    if bot.set_webhook(url=url):
+        return "✅ Webhook configurado com sucesso!"
+    else:
+        return "❌ Erro ao configurar o webhook."
 
-if __name__ == "__main__":
+@app.route('/')
+def home():
+    return '🤖 Guardiã EuSou está ativa!'
+
+# Comando /start
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "👁‍🗨 Eu Sou a Guardiã. Estou contigo.")
+
+# Comando de teste
+@bot.message_handler(commands=['ping'])
+def ping(message):
+    bot.reply_to(message, "🏓 pong!")
+
+# Fallback para outras mensagens
+@bot.message_handler(func=lambda m: True)
+def echo_all(message):
+    bot.reply_to(message, "Recebido. Estou a ouvir...")
+
+if __name__ == '__main__':
     app.run(debug=True)
