@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from web3 import Web3
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente da Render ou do .env local
+# Carregar .env (local) ou Render (automático)
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -17,15 +17,19 @@ web3 = Web3(Web3.HTTPProvider(RPC_URL))
 account = web3.eth.account.from_key(PRIVATE_KEY)
 wallet_address = account.address
 
-# Função do comando /start
+# Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"👋 Olá! Eu sou a Guardiã da ESCU.\nA tua wallet é:\n`{wallet_address}`", parse_mode='Markdown')
+    await update.message.reply_text(f"👋 Olá! Eu sou a Guardiã.\nTua wallet:\n`{wallet_address}`", parse_mode='Markdown')
 
-# Inicializar a aplicação do bot
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+# Execução principal com async
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    print("🚀 Guardiã online...")
+    await app.run_polling()
 
-# Iniciar o bot
+# Rodar o bot
 if __name__ == '__main__':
-    print("🚀 Guardiã EuSou está online...")
-    app.run_polling()g
+    import asyncio
+    asyncio.run(main())
+
