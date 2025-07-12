@@ -1,41 +1,48 @@
 import os
-from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, CallbackContext
+from web3 import Web3
 from dotenv import load_dotenv
 
-# Carregar variáveis do .env
 load_dotenv()
-TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Inicializar bot e app
+# Telegram & Blockchain configs
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+RPC_URL = os.getenv("RPC_URL")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS") # opcional
+
 bot = Bot(token=TOKEN)
-app = Flask(__name__)
+web3 = Web3(Web3.HTTPProvider(RPC_URL))
+
+# Wallet derivada da private key
+account = web3.eth.account.from_key(PRIVATE_KEY)
+wallet_address = account.address
 
 # Comando /start
-def start(update: Update, context):
-    update.message.reply_text("🔺 Olá, Guardião. A Guardiã está viva e pronta para te servir.")
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text(f"👋 Olá, Guardião!\nWallet ligada:\n{wallet_address}")
 
-# Configurar dispatcher do Telegram
-dispatcher = Dispatcher(bot, None, use_context=True)
-dispatcher.add_handler(CommandHandler("start", start))
+# Comando /saldo
+def saldo(update: Update, context: CallbackContext) -> None:
+    try:
+        saldo_wei = web3.eth.get_balance(wallet_address)
+        saldo_eth = web3.from_wei(saldo_wei, 'ether')
+        update.message.reply_text(f"💰 Saldo atual: {saldo_eth:.6f} BNB")
+    except Exception as e:
+        update.message.reply_text(f"Erro ao obter saldo: {str(e)}")
 
-# Webhook principal (para receber mensagens do Telegram)
-@app.route(f"/{TOKEN}", methods=["POST"])
-def respond():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return "OK", 200
+# Inicialização do bot
+def main():
+    updater = Updater(token=TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-# Endpoint para definir o webhook
-@app.route("/set_webhook", methods=["GET", "POST"])
-def set_webhook():
-    webhook_url = f"{os.getenv('RENDER_EXTERNAL_URL')}/{TOKEN}"
-    bot.set_webhook(url=webhook_url)
-    return f"🔗 Webhook definido para: {webhook_url}"
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("saldo", saldo))
 
-# Mensagem para homepage
-@app.route("/")
-def index():
-    return "🌐 Guardiã EuSou está online e ativa.", 200
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
 
