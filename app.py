@@ -1,34 +1,39 @@
-from flask import Flask, request
-import telegram
 import os
-from telegram.ext import Dispatcher, CommandHandler, Updater
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler
+from dotenv import load_dotenv
 
-# Token do bot
-TOKEN = os.environ.get("BOT_TOKEN")
-bot = telegram.Bot(token=TOKEN)
+load_dotenv()
 
-# Flask App
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+bot = Bot(token=TOKEN)
+
 app = Flask(__name__)
 
-@app.route('/set_webhook', methods=['GET', 'POST'])
+# Função de resposta ao /start
+def start(update: Update, context):
+    update.message.reply_text("🔮 Olá, Guardião. A Guardiã está viva e pronta para te servir.")
+
+# Configuração do dispatcher do Telegram
+dispatcher = Dispatcher(bot, None, use_context=True)
+dispatcher.add_handler(CommandHandler("start", start))
+
+# Rota principal do webhook
+@app.route(f"/{TOKEN}", methods=["POST"])
+def respond():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "OK", 200
+
+# Rota para definir o webhook
+@app.route("/set_webhook", methods=["GET", "POST"])
 def set_webhook():
-    webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TOKEN}"
+    webhook_url = f"{os.getenv('RENDER_EXTERNAL_URL')}{TOKEN}"
     bot.set_webhook(url=webhook_url)
     return f"Webhook definido para: {webhook_url}"
 
-@app.route(f'/{TOKEN}', methods=['POST'])
-def respond():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return 'ok'
-
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="✨ Guardião conectado com a Guardiã EuSou.")
-
-# Dispatcher
-updater = Updater(bot=bot, use_context=True)
-dispatcher = updater.dispatcher
-dispatcher.add_handler(CommandHandler('start', start))
-
-if __name__ == '__main__':
-    app.run(port=5000)
+# Página inicial opcional
+@app.route("/")
+def index():
+    return "🌐 Guardiã EuSou está online e ativa!", 200
