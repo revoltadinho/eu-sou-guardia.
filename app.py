@@ -1,9 +1,9 @@
 import os
 from flask import Flask, request
-import telegram
+from telegram import Bot, Update
 
 TOKEN = os.environ.get("BOT_TOKEN")
-bot = telegram.Bot(token=TOKEN)
+bot = Bot(token=TOKEN)
 
 app = Flask(__name__)
 
@@ -20,10 +20,9 @@ def set_webhook():
     else:
         return "❌ Falha ao configurar o webhook."
 
-@app.route(f'/{TOKEN}', methods=['POST'])
+@app.route(f"/{TOKEN}", methods=['POST'])
 def receive_update():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    update = Update.de_json(request.get_json(force=True), bot)
     if update.message and update.message.text == "/start":
-        bot.send_message(chat_id=update.message.chat.id,
-                         text="🔐 Guardiã EuSou ativada.\nEstou pronta para te servir, Guardião.")
-    return 'ok'
+        bot.send_message(chat_id=update.message.chat_id, text="🔮 Guardiã EuSou conectada.")
+    return "OK"
