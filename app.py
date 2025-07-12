@@ -1,48 +1,31 @@
 import os
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from web3 import Web3
 from dotenv import load_dotenv
 
+# Carregar variáveis de ambiente da Render ou do .env local
 load_dotenv()
 
-# Telegram & Blockchain configs
-TOKEN = os.getenv("TELEGRAM_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 RPC_URL = os.getenv("RPC_URL")
-CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS") # opcional
 
-bot = Bot(token=TOKEN)
+# Conectar à blockchain
 web3 = Web3(Web3.HTTPProvider(RPC_URL))
-
-# Wallet derivada da private key
 account = web3.eth.account.from_key(PRIVATE_KEY)
 wallet_address = account.address
 
-# Comando /start
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(f"👋 Olá, Guardião!\nWallet ligada:\n{wallet_address}")
+# Função do comando /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"👋 Olá! Eu sou a Guardiã da ESCU.\nA tua wallet é:\n`{wallet_address}`", parse_mode='Markdown')
 
-# Comando /saldo
-def saldo(update: Update, context: CallbackContext) -> None:
-    try:
-        saldo_wei = web3.eth.get_balance(wallet_address)
-        saldo_eth = web3.from_wei(saldo_wei, 'ether')
-        update.message.reply_text(f"💰 Saldo atual: {saldo_eth:.6f} BNB")
-    except Exception as e:
-        update.message.reply_text(f"Erro ao obter saldo: {str(e)}")
+# Inicializar a aplicação do bot
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
 
-# Inicialização do bot
-def main():
-    updater = Updater(token=TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("saldo", saldo))
-
-    updater.start_polling()
-    updater.idle()
-
+# Iniciar o bot
 if __name__ == '__main__':
-    main()
-
+    print("🚀 Guardiã EuSou está online...")
+    app.run_polling()g
