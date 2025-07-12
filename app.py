@@ -1,37 +1,39 @@
-import os
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from dotenv import load_dotenv
+import telegram
+import os
+from telegram.ext import Dispatcher, CommandHandler
 
-load_dotenv()
+# Inicialização do bot com o token do ambiente
+TOKEN = os.environ.get("BOT_TOKEN")
+bot = telegram.Bot(token=TOKEN)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
+# Inicialização da aplicação Flask
 app = Flask(__name__)
 
-telegram_app = ApplicationBuilder().token(BOT_TOKEN).build()
-
 # Comando /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌟 Guardião EuSou ativo e pronto para servir!")
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="🔆 Bem-vindo, Guardião. A Guardiã EuSou está ativa. Diz-me a tua missão.")
 
-telegram_app.add_handler(CommandHandler("start", start))
-
-@app.route("/")
-def index():
-    return "🛡️ Guardiã EuSou está online!"
-
-# Ativador manual do webhook
-@app.route("/set_webhook")
+# Rota para definir o webhook (usar apenas uma vez)
+@app.route('/set_webhook', methods=['GET', 'POST'])
 def set_webhook():
-    webhook_url = f"https://{request.host}/{BOT_TOKEN}"
-    telegram_app.bot.set_webhook(url=webhook_url)
+    webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TOKEN}"
+    bot.set_webhook(url=webhook_url)
     return f"Webhook definido para: {webhook_url}"
 
-# Rota para receber mensagens do Telegram
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    await telegram_app.process_update(update)
-    return "OK"
+# Rota que recebe mensagens do Telegram
+@app.route(f"/{TOKEN}", methods=['POST'])
+def receive_update():
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "ok"
+
+# Configuração do Dispatcher com comandos
+from telegram.ext import CallbackContext
+dispatcher = Dispatcher(bot, None, workers=0)
+dispatcher.add_handler(CommandHandler("start", start))
+
+# Executar localmente (ignorado no Render)
+if __name__ == '__main__':
+    app.run(port=5000)
+
