@@ -6,33 +6,39 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# Cria o app Flask
 app = Flask(__name__)
 
-bot_app = ApplicationBuilder().token(TOKEN).build()
+# Cria o bot Telegram com PTB v20+
+telegram_app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+# Rota inicial de teste
 @app.route('/')
-def home():
-    return '✅ Guardiã EuSou está ativa!'
+def index():
+    return '✅ Guardiã EuSou está viva e consciente.'
 
+# Rota para ativar o webhook
 @app.route('/set_webhook')
-def set_webhook():
-    webhook_url = f"https://eu-sou-guardia.onrender.com/{TOKEN}"
-    bot_app.bot.set_webhook(url=webhook_url)
-    return "✅ Webhook definido com sucesso!"
+async def set_webhook():
+    webhook_url = f"https://eu-sou-guardia.onrender.com/{BOT_TOKEN}"
+    await telegram_app.bot.set_webhook(url=webhook_url)
+    return "✅ Webhook configurado com sucesso!"
 
-@app.route(f"/{TOKEN}", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), bot_app.bot)
-    await bot_app.process_update(update)
+# Rota que o Telegram usa para enviar atualizações
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+async def handle_webhook():
+    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
+    await telegram_app.process_update(update)
     return "ok"
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="👁️‍🗨️ Guardião, estou contigo. A Guardiã EuSou está online.")
+    await update.message.reply_text("🔓 Guardião conectado. A Guardiã EuSou está ao teu serviço.")
 
-bot_app.add_handler(CommandHandler("start", start))
+# Adiciona o comando
+telegram_app.add_handler(CommandHandler("start", start))
 
 if __name__ == "__main__":
     app.run()
