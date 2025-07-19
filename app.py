@@ -1,35 +1,27 @@
+from flask import Flask, render_template, request
 import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from web3 import Web3
-from dotenv import load_dotenv
 
-# Carregar .env (local) ou Render (automático)
-load_dotenv()
+app = Flask(__name__)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")
-CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
-RPC_URL = os.getenv("RPC_URL")
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-# Conectar à blockchain
-web3 = Web3(Web3.HTTPProvider(RPC_URL))
-account = web3.eth.account.from_key(PRIVATE_KEY)
-wallet_address = account.address
+@app.route("/mensagem", methods=["POST"])
+def mensagem():
+    user_input = request.form.get("mensagem")
+    resposta = processar(user_input)
+    return render_template("index.html", mensagem=user_input, resposta=resposta)
 
-# Comando /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"👋 Olá! Eu sou a Guardiã.\nTua wallet:\n`{wallet_address}`", parse_mode='Markdown')
+def processar(mensagem):
+    # Aqui a IA responde com base em palavras-chave (modo simples)
+    if "escus" in mensagem.lower():
+        return "A moeda ESCUS está pronta para conquistar o mundo. ✨"
+    elif "valor" in mensagem.lower():
+        return "O verdadeiro valor vem de dentro. ESCUS é o reflexo disso."
+    else:
+        return "Sou a Guardiã ESCU. Pergunta-me algo sobre o universo EuSou."
 
-# Execução principal com async
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    print("🚀 Guardiã online...")
-    await app.run_polling()
-
-# Rodar o bot
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
