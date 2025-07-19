@@ -1,1 +1,19 @@
-
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Guardião EuSou</title>
+</head>
+<body>
+  <h1>Eu Sou a Guardiã ESCU</h1>
+  <form action="/mensagem" method="post">
+    <label for="mensagem">Escreve a tua pergunta:</label><br>
+    <input type="text" id="mensagem" name="mensagem"><br><br>
+    <input type="submit" value="Enviar">
+  </form>
+  {% if resposta %}
+    <h2>Resposta:</h2>
+    <p>{{ resposta }}</p>
+  {% endif %}
+</body>
+</html>
