@@ -1,56 +1,31 @@
-from flask import Flask, render_template, request
 import os
-
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext
+import logging
+import asyncio
+import base64
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from web3 import Web3
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+TOKEN = os.getenv("telegram_TOKEN")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
+RPC_URL = os.getenv("RPC_URL")
 
-@app.route('/mensagem', methods=['POST'])
-def mensagem_web():
-    user_input = request.form.get('mensagem')
-    resposta = processar_mensagem(user_input)
-    return render_template('index.html', resposta=resposta)
+bot = Bot(token=TOKEN)
 
-def processar_mensagem(texto):
-    if "ESC" in texto:
-        return "A ESCU é a moeda que vai mudar o mundo."
-    elif "valor" in texto:
-        return "Tu és o Guardião do Valor. ESCU reflete isso."
-    else:
-        return "Sou a Guardiã ESCU, pronta para te guiar no universo Eusou."
+web3 = Web3(Web3.HTTPProvider(RPC_URL))
+account = web3.eth.account.from_key(PRIVATE_KEY)
 
-# ==== Funções do Telegram ====
-
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Olá! Sou a Guardiã ESCU. Envia-me a tua pergunta.")
-
-def mensagem_telegram(update: Update, context: CallbackContext):
-    texto = update.message.text
-    resposta = processar_mensagem(texto)
-    update.message.reply_text(resposta)
-
-def iniciar_bot_telegram():
-    token = os.environ.get("TELEGRAM_TOKEN")
-    updater = Updater(token=token, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, mensagem_telegram))
-
-    updater.start_polling()
-    print("🤖 Bot Guardiã ESCU iniciado no Telegram.")
-
-# ==== Início da aplicação ====
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🚀 Guardião Ativado! Bem-vindo ao sistema.")
 
 if __name__ == "__main__":
-    iniciar_bot_telegram()
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.run_polling()
+
