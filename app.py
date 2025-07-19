@@ -1,7 +1,5 @@
 import os
 import logging
-import asyncio
-import base64
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from web3 import Web3
@@ -28,4 +26,3 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.run_polling()
-
