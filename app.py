@@ -3,30 +3,27 @@ import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Ativar logs (útil para debugging)
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Logs
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-# Comando /start
+# Comandos
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔐 Guardiã EuSou online.\nTudo pronto para proteger o teu valor.")
+    await update.message.reply_text("✅ Guardiã EuSou está ativa e pronta.")
 
-# Comando /ping
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🛰️ Pong — conexão ativa!")
+    await update.message.reply_text("📡 Pong — conexão segura!")
 
-# Função principal
 def main():
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
-        raise Exception("⚠️ TELEGRAM_TOKEN não está definido no ambiente Render!")
+        raise Exception("⚠️ Variável TELEGRAM_TOKEN não definida!")
 
     app = ApplicationBuilder().token(token).build()
-
-    # Handlers de comandos
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
-
-    # Inicia o bot
     app.run_polling()
 
 if __name__ == "__main__":
