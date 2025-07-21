@@ -1,25 +1,33 @@
+import logging
 import os
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from web3 import Web3
-from dotenv import load_dotenv
 
-load_dotenv()
+# Ativar logs (útil para debugging)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-PRIVATE_KEY = os.getenv("PRIVATE_KEY")
-RPC_URL = os.getenv("RPC_URL")
-CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
-
-w3 = Web3(Web3.HTTPProvider(RPC_URL))
-bot = Bot(token=TELEGRAM_TOKEN)
-
+# Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Guardiã EuSou ativada. Pronta para proteger o valor.")
+    await update.message.reply_text("🔐 Guardiã EuSou online.\nTudo pronto para proteger o teu valor.")
 
-app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+# Comando /ping
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🛰️ Pong — conexão ativa!")
 
-if __name__ == '__main__':
-    print("✅ IA Guardiã iniciada.")
+# Função principal
+def main():
+    token = os.getenv("TELEGRAM_TOKEN")
+    if not token:
+        raise Exception("⚠️ TELEGRAM_TOKEN não está definido no ambiente Render!")
+
+    app = ApplicationBuilder().token(token).build()
+
+    # Handlers de comandos
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ping", ping))
+
+    # Inicia o bot
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
