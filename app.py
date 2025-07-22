@@ -1,5 +1,11 @@
+import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente do ficheiro .env
+load_dotenv()
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # Comando de arranque
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -7,10 +13,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # Inicialização da aplicação
 if __name__ == '__main__':
-    application = ApplicationBuilder().token("7830732466:AAEl5DWOS1Amwp-rtX1YPpyOQvuiziEi3BU").build()
-
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-
     print("✅ IA Guardiã iniciada com sucesso.")
     application.run_polling()
-
