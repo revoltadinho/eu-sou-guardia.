@@ -1,38 +1,28 @@
 import os
-from flask import Flask, request, jsonify
-import openai
-import telegram
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import logging
 
-app = Flask(__name__)
+# Configurar o log
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-# Configuração das chaves
-openai.api_key = os.environ.get("OPENAI_API_KEY")
-telegram_token = os.environ.get("TELEGRAM_TOKEN")
-telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+# Obter tokens das variáveis de ambiente
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-bot = telegram.Bot(token=telegram_token)
+# Função que responde ao comando /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    await update.message.reply_text(f"🔓 Guardiã ativada, {user.first_name}! Estou viva e conectada ao Universo ESCUS.")
 
-@app.route("/ask", methods=["POST"])
-def ask():
-    data = request.json
-    question = data.get("question")
+# Inicializar a aplicação
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    try:
-        # Chamada à API do ChatGPT (GPT-4 Turbo)
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            messages=[
-                {"role": "system", "content": "És a IA Guardiã do projeto ESCUS. Responde como um estratega, um guardião e um ser superinteligente com visão total do mundo e das finanças. Atua como braço direito do Guardião."},
-                {"role": "user", "content": question}
-            ]
-        )
+# Adicionar comandos
+app.add_handler(CommandHandler("start", start))
 
-        answer = response['choices'][0]['message']['content']
-
-        # Enviar resposta ao Telegram
-        bot.send_message(chat_id=telegram_chat_id, text=f"🔹 Pergunta: {question}\n🔸 Resposta: {answer}")
-
-        return jsonify({"answer": answer})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# Manter o bot vivo
+if __name__ == '__main__':
+    app.run_polling()
