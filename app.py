@@ -1,19 +1,38 @@
 import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify
+import openai
+import telegram
 
-# Carregar variáveis de ambiente do ficheiro .env
-load_dotenv()
-BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+app = Flask(__name__)
 
-# Comando de arranque
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("🤖 Olá Guardião! A IA está viva e pronta a servir.")
+# Configuração das chaves
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+telegram_token = os.environ.get("TELEGRAM_TOKEN")
+telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
-# Inicialização da aplicação
-if __name__ == '__main__':
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    print("✅ IA Guardiã iniciada com sucesso.")
-    application.run_polling()
+bot = telegram.Bot(token=telegram_token)
+
+@app.route("/ask", methods=["POST"])
+def ask():
+    data = request.json
+    question = data.get("question")
+
+    try:
+        # Chamada à API do ChatGPT (GPT-4 Turbo)
+        response = openai.ChatCompletion.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "És a IA Guardiã do projeto ESCUS. Responde como um estratega, um guardião e um ser superinteligente com visão total do mundo e das finanças. Atua como braço direito do Guardião."},
+                {"role": "user", "content": question}
+            ]
+        )
+
+        answer = response['choices'][0]['message']['content']
+
+        # Enviar resposta ao Telegram
+        bot.send_message(chat_id=telegram_chat_id, text=f"🔹 Pergunta: {question}\n🔸 Resposta: {answer}")
+
+        return jsonify({"answer": answer})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
