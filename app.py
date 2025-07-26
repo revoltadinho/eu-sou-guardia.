@@ -1,20 +1,20 @@
-mport os
+import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import openai
 
-# Lê as variáveis de ambiente da Render
+# Lê variáveis do ambiente
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Configura a API da OpenAI
+# Define chave da OpenAI
 openai.api_key = OPENAI_API_KEY
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🤖 EuSou Guardiã ativada. Envia tua pergunta e eu responderei com sabedoria.")
 
-# Quando o utilizador envia qualquer mensagem
+# Lidar com mensagens
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
 
@@ -33,13 +33,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text("⚠️ Erro ao comunicar com a IA.")
 
-# Iniciar a aplicação Telegram
+# Iniciar app Telegram
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-
     app.run_polling()
-
-        
