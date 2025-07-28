@@ -10,7 +10,7 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-@app.route('/')
+@app.route("/")
 def index():
     return "Bot EuSou Guardiã está ativo!"
 
@@ -19,8 +19,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 telegram_app.add_handler(CommandHandler("start", start))
 
-import threading
 def run_telegram():
     telegram_app.run_polling()
 
-threading.Thread(target=run_telegram).start()
+if __name__ == '__main__':
+    import threading
+    threading.Thread(target=run_telegram).start()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
