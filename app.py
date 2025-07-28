@@ -1,40 +1,45 @@
 import os
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from flask import Flask
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from dotenv import load_dotenv
 
-# Flask app para manter a instância ativa
-flask_app = Flask(__name__)
+load_dotenv()
 
-@flask_app.route('/')
-def home():
-    return 'Bot EuSou Guardiã ativo!'
+app = Flask(__name__)
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👁️ Olá, eu sou a Guardiã EuSou. Estou pronta para te acompanhar.")
+    await update.message.reply_text("Olá, Guardião. Estou pronto.")
 
-# Resposta automática
-async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    texto = update.message.text
-    resposta = f"Recebi a tua mensagem: '{texto}'\n🌐 (A integração GPT será ativada a seguir)"
-    await update.message.reply_text(resposta)
+# Comando /gpt
+async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = ' '.join(context.args)
+    if not user_message:
+        await update.message.reply_text("Escreve algo depois de /gpt")
+        return
+    await update.message.reply_text(f"Recebi: {user_message} (GPT será integrado em breve...)")
 
-def main():
-    # Variáveis de ambiente
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+# Rota web padrão para manter o Render acordado
+@app.route('/')
+def index():
+    return 'Bot Guardião ativo.'
 
-    # Inicializar aplicação do Telegram
-    app = ApplicationBuilder().token(token).build()
+# Inicializar o bot corretamente com async
+async def main():
+    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("gpt", gpt))
+    await application.run_polling()
 
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
+# Executar o bot no background (async)
+import asyncio
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
-    # Iniciar o bot (em background)
-    app.run_polling()
-
-if __name__ == "__main__":
-    import threading
-    threading.Thread(target=main).start()
-    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+   
