@@ -1,37 +1,40 @@
 import os
-import logging
-from flask import Flask, request
-import telegram
 from telegram import Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from flask import Flask
 
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
-bot = telegram.Bot(token=TOKEN)
+# Flask app para manter a instância ativa
+flask_app = Flask(__name__)
 
-app = Flask(__name__)
-
-@app.route('/')
+@flask_app.route('/')
 def home():
-    return '🤖 Bot Revoltadinho está vivo!'
+    return 'Bot EuSou Guardiã ativo!'
 
-@app.route(f'/{TOKEN}', methods=['POST'])
-def respond():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return 'ok'
+# Comando /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👁️ Olá, eu sou a Guardiã EuSou. Estou pronta para te acompanhar.")
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text('Olá! Eu sou a IA Guardiã Revoltadinha! 🔥')
+# Resposta automática
+async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    texto = update.message.text
+    resposta = f"Recebi a tua mensagem: '{texto}'\n🌐 (A integração GPT será ativada a seguir)"
+    await update.message.reply_text(resposta)
 
-def reply(update: Update, context: CallbackContext):
-    user_message = update.message.text
-    update.message.reply_text(f"Recebi: {user_message} ✅")
+def main():
+    # Variáveis de ambiente
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Inicializar dispatcher global
-dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply))
+    # Inicializar aplicação do Telegram
+    app = ApplicationBuilder().token(token).build()
 
-if __name__ == '__main__':
-    app.run()
+    # Handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
+    # Iniciar o bot (em background)
+    app.run_polling()
+
+if __name__ == "__main__":
+    import threading
+    threading.Thread(target=main).start()
+    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
