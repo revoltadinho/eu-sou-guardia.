@@ -1,58 +1,40 @@
 import os
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-import openai
+import telebot
 from dotenv import load_dotenv
 
-# Carregar variáveis de ambiente
 load_dotenv()
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+API_KEY = os.getenv("TELEGRAM_API_KEY")
+bot = telebot.TeleBot(API_KEY)
+ADMIN_ID = os.getenv("ADMIN_ID")
 
-# Inicializar OpenAI
-openai.api_key = OPENAI_API_KEY
-
-# Inicializar bot
 app = Flask(__name__)
-updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-dispatcher = updater.dispatcher
 
-# Comando /start
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Olá, sou a Guardiã EuSou. Envia-me uma pergunta!")
+@bot.message_handler(commands=["start"])
+def send_welcome(message):
+    print(f"ID do utilizador: {message.chat.id}") # <- Isto vai aparecer nos logs
+    bot.reply_to(message, "Olá! Bot da Guardiã EuSou está ativo.")
 
-# Mensagens de texto
-def handle_message(update: Update, context: CallbackContext):
-    pergunta = update.message.text
-    resposta = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Responde como a Guardiã do projeto EuSou, com sabedoria e clareza."},
-            {"role": "user", "content": pergunta}
-        ]
-    )
-    texto = resposta['choices'][0]['message']['content']
-    update.message.reply_text(texto)
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if str(message.chat.id) == ADMIN_ID:
+        bot.reply_to(message, "Mensagem recebida, Guardião.")
+    else:
+        bot.reply_to(message, "Acesso restrito à Guardiã.")
 
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-@app.route("/", methods=["GET"])
+@app.route("/")
 def index():
     return "Guardiã EuSou ativa!"
 
-@app.route("/webhook", methods=["POST"])
+@app.route(f"/{API_KEY}", methods=["POST"])
 def webhook():
-    data = request.get_json(force=True)
-    update = Update.de_json(data, updater.bot)
-    dispatcher.process_update(update)
-    return "ok"
+    json_str = request.get_data().decode("UTF-8")
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "ok", 200
 
 if __name__ == "__main__":
-    updater.start_polling()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
-
-  
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{os.getenv('RENDER_EXTERNAL_URL')}/{API_KEY}")
+    app.run(host="0.0.0.0", port=10000)
