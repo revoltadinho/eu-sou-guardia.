@@ -1,48 +1,62 @@
 import os
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import time
+import requests
 import openai
 
-# Configurar logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Variáveis de ambiente
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-
-# Inicializar OpenAI
 openai.api_key = OPENAI_API_KEY
+BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
-# Comando /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Olá! Eu sou a Guardiã GPT-4 Turbo. Envia-me uma pergunta.")
+def get_updates(offset=None):
+    url = f"{BASE_URL}/getUpdates"
+    params = {"timeout": 100, "offset": offset}
+    response = requests.get(url, params=params)
+    return response.json()
 
-# Comando /perguntar + mensagem
-async def perguntar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pergunta = " ".join(context.args)
-    if not pergunta:
-        await update.message.reply_text("Por favor, escreve uma pergunta depois do comando /perguntar.")
-        return
+def send_message(chat_id, text):
+    url = f"{BASE_URL}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    requests.post(url, data=payload)
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4-turbo",
-        messages=[{"role": "user", "content": pergunta}]
-    )
+def ask_gpt(message):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Responder como Guardiã GPT-4 Turbo, aliada do projeto EuSouCoin."},
+                {"role": "user", "content": message}
+            ]
+        )
+        return response.choices[0].message["content"].strip()
+    except Exception as e:
+        return f"Erro ao conectar com o GPT-4: {e}"
 
-    resposta = response.choices[0].message.content.strip()
-    await update.message.reply_text(resposta)
+def main():
+    last_update_id = None
+    welcome_sent = False
 
-# Inicializar aplicação Telegram
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    while True:
+        updates = get_updates(offset=last_update_id)
+        if "result" in updates:
+            for update in updates["result"]:
+                last_update_id = update["update_id"] + 1
+                message = update.get("message")
+                if not message:
+                    continue
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("perguntar", perguntar))
+                chat_id = message["chat"]["id"]
+                text = message.get("text", "")
 
-    print("Bot iniciado com sucesso!")
-    app.run_polling()
+                if text.lower() in ["/start", "start"] and not welcome_sent:
+                    send_message(chat_id, "Olá! Eu sou a Guardiã GPT-4 Turbo. Envia-me uma pergunta.")
+                    welcome_sent = True
+                else:
+                    resposta = ask_gpt(text)
+                    send_message(chat_id, resposta)
+        time.sleep(2)
+
+if __name__ == "__main__":
+    main()
