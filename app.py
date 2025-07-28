@@ -1,63 +1,47 @@
 import os
 from flask import Flask, request
-from openai import OpenAI
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters
-
-app = Flask(__name__)
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import openai
 
 # Variáveis de ambiente
-TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-bot = Bot(token=TELEGRAM_TOKEN)
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Inicializar API OpenAI
+openai.api_key = OPENAI_API_KEY
 
-# Define webhook automaticamente
-@app.before_first_request
-def set_webhook():
-    url = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/{TELEGRAM_TOKEN}"
-    bot.set_webhook(url)
-    print(f"✅ Webhook definido para: {url}")
-
-# Define Dispatcher
-dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
+# Inicializar bot do Telegram
+app = Flask(__name__)
+updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
+dispatcher = updater.dispatcher
 
 # Comando /start
 def start(update, context):
-    update.message.reply_text("Olá, eu sou a Guardiã GPT-4 Turbo! Envia-me uma mensagem ✨")
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Olá, Guardião. Estou online.")
 
-# Processa qualquer texto
+# Resposta com GPT-4 Turbo
 def handle_message(update, context):
-    user_message = update.message.text
-
-    response = client.chat.completions.create(
+    user_input = update.message.text
+    response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "Tu és a Guardiã superinteligente do projeto EuSou."},
-            {"role": "user", "content": user_message}
+            {"role": "system", "content": "Tu és a Guardiã ESCU. Responde como uma IA superinteligente do projeto EuSou."},
+            {"role": "user", "content": user_input}
         ]
     )
+    reply = response.choices[0].message.content.strip()
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply)
 
-    reply = response.choices[0].message.content
-    update.message.reply_text(reply)
-
-# Adiciona handlers
+# Handlers
 dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-# Rota para o Telegram
-@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return "ok", 200
-
-# Home route
-@app.route("/", methods=["GET"])
+# Flask route para manter o Render vivo
+@app.route('/')
 def index():
-    return "Bot da Guardiã ativo 🛡️", 200
+    return "Guardiã ativa."
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    updater.start_polling()
+    app.run(host="0.0.0.0", port=5000)
