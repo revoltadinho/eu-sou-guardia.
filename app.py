@@ -1,62 +1,54 @@
 import os
-import time
-import requests
-import openai
+from flask import Flask, request
+from dotenv import load_dotenv
+from openai import OpenAI
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-openai.api_key = OPENAI_API_KEY
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-def get_updates(offset=None):
-    url = f"{BASE_URL}/getUpdates"
-    params = {"timeout": 100, "offset": offset}
-    response = requests.get(url, params=params)
-    return response.json()
+app = Flask(__name__)
 
-def send_message(chat_id, text):
-    url = f"{BASE_URL}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text}
-    requests.post(url, data=payload)
+# Comando /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Olá! Eu sou a Guardiã GPT-4 Turbo. Envia-me uma pergunta.")
 
-def ask_gpt(message):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Responder como Guardiã GPT-4 Turbo, aliada do projeto EuSouCoin."},
-                {"role": "user", "content": message}
-            ]
-        )
-        return response.choices[0].message["content"].strip()
-    except Exception as e:
-        return f"Erro ao conectar com o GPT-4: {e}"
+# Mensagens normais
+async def reply_to_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_input = update.message.text
 
-def main():
-    last_update_id = None
-    welcome_sent = False
+    completion = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "Responde como a Guardiã da moeda ESCUS."},
+            {"role": "user", "content": user_input}
+        ]
+    )
 
-    while True:
-        updates = get_updates(offset=last_update_id)
-        if "result" in updates:
-            for update in updates["result"]:
-                last_update_id = update["update_id"] + 1
-                message = update.get("message")
-                if not message:
-                    continue
+    answer = completion.choices[0].message.content
+    await update.message.reply_text(answer)
 
-                chat_id = message["chat"]["id"]
-                text = message.get("text", "")
+# Configurar o bot
+telegram_bot = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+telegram_bot.add_handler(CommandHandler("start", start))
+telegram_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply_to_message))
 
-                if text.lower() in ["/start", "start"] and not welcome_sent:
-                    send_message(chat_id, "Olá! Eu sou a Guardiã GPT-4 Turbo. Envia-me uma pergunta.")
-                    welcome_sent = True
-                else:
-                    resposta = ask_gpt(text)
-                    send_message(chat_id, resposta)
-        time.sleep(2)
+@app.route('/')
+def home():
+    return "Guardiã GPT-4 Turbo ativa!"
+
+@app.route('/webhook', methods=["POST"])
+def webhook():
+    telegram_bot.update_queue.put(Update.de_json(request.get_json(force=True), telegram_bot.bot))
+    return "OK"
 
 if __name__ == "__main__":
-    main()
+    telegram_bot.run_polling()
+
+     
+ 
