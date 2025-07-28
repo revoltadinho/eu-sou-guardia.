@@ -15,14 +15,12 @@ def index():
     return "Bot EuSou Guardiã está ativo!"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👁️ Eu Sou a Guardiã. Estou ativa.")
+    await update.message.reply_text("🔮 Eu sou a Guardiã. Estou ativa.")
 
 telegram_app.add_handler(CommandHandler("start", start))
 
+import threading
 def run_telegram():
     telegram_app.run_polling()
 
-if __name__ == '__main__':
-    import threading
-    threading.Thread(target=run_telegram).start()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+threading.Thread(target=run_telegram).start()
