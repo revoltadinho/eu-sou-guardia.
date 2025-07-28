@@ -1,42 +1,28 @@
 import os
-import threading
-from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from dotenv import load_dotenv
 
-# Carrega o .env
-load_dotenv()
-
-# Flask App
-app = Flask(__name__)
-
-# Variáveis do .env
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# Verificação
-if not BOT_TOKEN or not ADMIN_ID:
-    raise Exception("BOT_TOKEN ou ADMIN_ID não definido. Verifica o ficheiro .env.")
-
-# Telegram Bot
-telegram_app = Application.builder().token(BOT_TOKEN).build()
-
-# Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⚡ Guardiã ativa e em sintonia.")
+    await update.message.reply_text("🚀 Guardião ativo e operacional!")
 
-# Adiciona comando ao bot
-telegram_app.add_handler(CommandHandler("start", start))
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id == ADMIN_ID:
+        await update.message.reply_text("✅ Acesso autorizado, Guardião.")
+    else:
+        await update.message.reply_text("⛔️ Acesso negado.")
 
-# Endpoint do Flask
-@app.route("/")
-def index():
-    return "✅ Guardiã ESCUS está online e operacional."
+def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("admin", admin))
 
-# Thread do Telegram
-def run_telegram():
-    telegram_app.run_polling()
+    # 🔥 Esta linha evita os erros de asyncio que estás a ter
+    application.run_polling()
 
-# Inicia o bot numa thread
-threading.Thread(target=run_telegram).start()
+if __name__ == '__main__':
+    main()
+
