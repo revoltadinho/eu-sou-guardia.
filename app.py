@@ -1,40 +1,60 @@
 import os
-from flask import Flask, request
 import telebot
-from dotenv import load_dotenv
+import openai
+from flask import Flask, request
 
-load_dotenv()
-
-API_KEY = os.getenv("TELEGRAM_API_KEY")
-bot = telebot.TeleBot(API_KEY)
+# 🔐 Variáveis de ambiente seguras
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = os.getenv("ADMIN_ID")
+GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4-turbo")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# 🛡️ Verificações
+if not BOT_TOKEN:
+    raise Exception("BOT_TOKEN não encontrado no ambiente!")
+
+if not OPENAI_API_KEY:
+    raise Exception("OPENAI_API_KEY não encontrado no ambiente!")
+
+# 🤖 Inicialização do bot
+bot = telebot.TeleBot(BOT_TOKEN)
+openai.api_key = OPENAI_API_KEY
+
+# 🌐 App Flask para manter o serviço vivo na Render
 app = Flask(__name__)
 
-@bot.message_handler(commands=["start"])
-def send_welcome(message):
-    print(f"ID do utilizador: {message.chat.id}") # <- Isto vai aparecer nos logs
-    bot.reply_to(message, "Olá! Bot da Guardiã EuSou está ativo.")
+# 🧠 Função para resposta GPT
+def ask_gpt(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model=GPT_MODEL,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Erro ao conectar ao GPT: {str(e)}"
 
+# 📩 Reage a mensagens
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
-    if str(message.chat.id) == ADMIN_ID:
-        bot.reply_to(message, "Mensagem recebida, Guardião.")
-    else:
-        bot.reply_to(message, "Acesso restrito à Guardiã.")
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "Acesso restrito ao Guardião.")
+        return
 
-@app.route("/")
+    resposta = ask_gpt(message.text)
+    bot.send_message(message.chat.id, resposta)
+
+# 🌐 Endpoint básico para manter a instância viva
+@app.route('/', methods=["GET"])
 def index():
-    return "Guardiã EuSou ativa!"
+    return "EuSou Guardiã online."
 
-@app.route(f"/{API_KEY}", methods=["POST"])
-def webhook():
-    json_str = request.get_data().decode("UTF-8")
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "ok", 200
+# 🔁 Atualizações long polling (funciona na Render Free)
+def start_bot():
+    print("Iniciando bot EuSou Guardiã...")
+    bot.infinity_polling()
 
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=f"{os.getenv('RENDER_EXTERNAL_URL')}/{API_KEY}")
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    start_bot()
+
+   
