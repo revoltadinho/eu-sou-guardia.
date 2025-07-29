@@ -1,69 +1,36 @@
 import os
-import logging
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    CommandHandler,
-    MessageHandler,
-    filters
-)
-import openai
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Ativar logging para ver erros
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-# Variáveis de ambiente
+# Carregar variáveis do ambiente
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ADMIN_ID = os.getenv("ADMIN_ID")
 
-openai.api_key = OPENAI_API_KEY
+# Verificação básica de segurança
+if BOT_TOKEN is None:
+    raise ValueError("Erro: A variável BOT_TOKEN não está definida.")
+if ADMIN_ID is None:
+    raise ValueError("Erro: A variável ADMIN_ID não está definida.")
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Olá! Sou o teu bot com GPT-4 Turbo. Envia uma pergunta!")
+    await update.message.reply_text("Olá! Eu sou o RevoltadinhoBot. Pronto para revoluções. 💥")
 
-# Mensagens de texto
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
-    user_id = str(update.message.chat_id)
+# Comando secreto só para o admin
+async def segredo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if str(update.effective_user.id) == ADMIN_ID:
+        await update.message.reply_text("⚠️ Acesso concedido ao painel secreto.")
+    else:
+        await update.message.reply_text("🚫 Acesso negado.")
 
-    # Permitir apenas o admin, se definido
-    if ADMIN_ID and user_id != ADMIN_ID:
-        await update.message.reply_text("Acesso restrito. Este bot é privado.")
-        return
+# Inicializar a aplicação do bot
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    try:
-        # Enviar para GPT-4 Turbo
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": user_message}],
-            max_tokens=500
-        )
-        reply = response.choices[0].message.content
-        await update.message.reply_text(reply)
+# Adicionar comandos
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("segredo", segredo))
 
-    except Exception as e:
-        logging.error(f"Erro na OpenAI: {e}")
-        await update.message.reply_text("Ocorreu um erro ao processar tua mensagem.")
+# Iniciar polling
+app.run_polling()
 
-# Inicialização do bot
-def main():
-    if not BOT_TOKEN or not OPENAI_API_KEY:
-        logging.error("BOT_TOKEN ou OPENAI_API_KEY não estão definidos no ambiente.")
-        return
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    print("Bot iniciado com sucesso.")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+  
