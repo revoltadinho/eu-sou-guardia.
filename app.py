@@ -1,43 +1,60 @@
-import os from flask import Flask, request from telegram import Bot, Update from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters, CallbackContext import openai
+import os
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters, CallbackContext
+import openai
 
-Inicializa app Flask
+# Inicializa app Flask
+app = Flask(__name__)
 
-app = Flask(name)
+# Carrega variáveis de ambiente
+TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+ADMIN_ID = os.environ.get("ADMIN_ID") # Opcional
 
-Carrega variáveis de ambiente
+# Inicializa Bot e Dispatcher
+bot = Bot(token=TOKEN)
+dispatcher = Dispatcher(bot=bot, update_queue=None, workers=4, use_context=True)
 
-TOKEN = os.environ.get("BOT_TOKEN") OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") ADMIN_ID = os.environ.get("ADMIN_ID") # Opcional
+# Configura OpenAI
+def pergunta_ia(mensagem):
+    openai.api_key = OPENAI_API_KEY
+    resposta = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": mensagem}]
+    )
+    return resposta.choices[0].message.content.strip()
 
-Inicializa Bot e Dispatcher
+# Comando /start
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Olá! Eu sou a Guardiã EuSou. Envia tua pergunta ou comando.")
 
-bot = Bot(token=TOKEN) dispatcher = Dispatcher(bot=bot, update_queue=None, workers=4, use_context=True)
+# Mensagem normal
+def responder(update: Update, context: CallbackContext):
+    pergunta = update.message.text
+    try:
+        resposta = pergunta_ia(pergunta)
+        update.message.reply_text(resposta)
+    except Exception as e:
+        update.message.reply_text("Erro ao responder. Tenta novamente mais tarde.")
 
-Configura OpenAI
+# Adiciona handlers
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
-def pergunta_ia(mensagem): openai.api_key = OPENAI_API_KEY resposta = openai.ChatCompletion.create( model="gpt-4", messages=[{"role": "user", "content": mensagem}] ) return resposta.choices[0].message.content.strip()
+# Rota principal para Webhook
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "ok"
 
-Comando /start
+# Rota de teste
+@app.route("/")
+def index():
+    return "Bot ativo. Guardiã EuSou online."
 
-def start(update: Update, context: CallbackContext): update.message.reply_text("Olá! Eu sou a Guardiã EuSou. Envia tua pergunta ou comando.")
-
-Mensagem normal
-
-def responder(update: Update, context: CallbackContext): pergunta = update.message.text try: resposta = pergunta_ia(pergunta) update.message.reply_text(resposta) except Exception as e: update.message.reply_text("Erro ao responder. Tenta novamente mais tarde.")
-
-Adiciona handlers
-
-dispatcher.add_handler(CommandHandler("start", start)) dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
-
-Rota principal para Webhook
-
-@app.route(f"/{TOKEN}", methods=["POST"]) def webhook(): update = Update.de_json(request.get_json(force=True), bot) dispatcher.process_update(update) return "ok"
-
-Rota de teste
-
-@app.route("/") def index(): return "Bot ativo. Guardiã EuSou online."
-
-Inicializa webhook ao arrancar
-
-if name == "main": bot.delete_webhook() app.run(port=5000)
-
-
+# Inicializa webhook ao arrancar
+if __name__ == "__main__":
+    bot.delete_webhook()
+    app.run(port=5000)
