@@ -1,36 +1,36 @@
 import os
+import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from dotenv import load_dotenv
 
-# Carregar variáveis do ambiente
+# Carrega as variáveis de ambiente
+load_dotenv()
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID")
 
-# Verificação básica de segurança
-if BOT_TOKEN is None:
-    raise ValueError("Erro: A variável BOT_TOKEN não está definida.")
-if ADMIN_ID is None:
-    raise ValueError("Erro: A variável ADMIN_ID não está definida.")
+# Ativa logs
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 # Comando /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Olá! Eu sou o RevoltadinhoBot. Pronto para revoluções. 💥")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Olá! Eu sou o SouRevoltadinhoBot. Estou online!")
 
-# Comando secreto só para o admin
-async def segredo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.effective_user.id) == ADMIN_ID:
-        await update.message.reply_text("⚠️ Acesso concedido ao painel secreto.")
-    else:
-        await update.message.reply_text("🚫 Acesso negado.")
+# Comando /ajuda
+async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Escreve algo e eu tentarei ajudar.")
 
-# Inicializar a aplicação do bot
-app = ApplicationBuilder().token(BOT_TOKEN).build()
+# Início da aplicação
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Adicionar comandos
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("segredo", segredo))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ajuda", ajuda))
 
-# Iniciar polling
-app.run_polling()
+    app.run_polling()
 
-  
+if __name__ == '__main__':
+    main()
