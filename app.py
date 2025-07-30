@@ -1,33 +1,43 @@
-import os
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from dotenv import load_dotenv
+import os from flask import Flask, request from telegram import Bot, Update from telegram.ext import Dispatcher, CommandHandler, MessageHandler, filters, CallbackContext import openai
 
-load_dotenv()
+Inicializa app Flask
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+app = Flask(name)
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+Carrega variáveis de ambiente
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Olá! Eu sou o SouRevoltadinhoBot. Estou vivo e pronto!")
+TOKEN = os.environ.get("BOT_TOKEN") OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") ADMIN_ID = os.environ.get("ADMIN_ID") # Opcional
 
-async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Envia uma mensagem ou usa /start para interagir comigo.")
+Inicializa Bot e Dispatcher
 
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+bot = Bot(token=TOKEN) dispatcher = Dispatcher(bot=bot, update_queue=None, workers=4, use_context=True)
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ajuda", ajuda))
+Configura OpenAI
 
-    app.run_polling()
+def pergunta_ia(mensagem): openai.api_key = OPENAI_API_KEY resposta = openai.ChatCompletion.create( model="gpt-4", messages=[{"role": "user", "content": mensagem}] ) return resposta.choices[0].message.content.strip()
 
-if __name__ == '__main__':
-    main()
+Comando /start
 
-    
+def start(update: Update, context: CallbackContext): update.message.reply_text("Olá! Eu sou a Guardiã EuSou. Envia tua pergunta ou comando.")
+
+Mensagem normal
+
+def responder(update: Update, context: CallbackContext): pergunta = update.message.text try: resposta = pergunta_ia(pergunta) update.message.reply_text(resposta) except Exception as e: update.message.reply_text("Erro ao responder. Tenta novamente mais tarde.")
+
+Adiciona handlers
+
+dispatcher.add_handler(CommandHandler("start", start)) dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
+
+Rota principal para Webhook
+
+@app.route(f"/{TOKEN}", methods=["POST"]) def webhook(): update = Update.de_json(request.get_json(force=True), bot) dispatcher.process_update(update) return "ok"
+
+Rota de teste
+
+@app.route("/") def index(): return "Bot ativo. Guardiã EuSou online."
+
+Inicializa webhook ao arrancar
+
+if name == "main": bot.delete_webhook() app.run(port=5000)
+
+
