@@ -14,20 +14,17 @@ application = ApplicationBuilder().token(TOKEN).build()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Olá! Eu sou a Guardiã Revoltadinha 😈💥")
 
-# Adicionar handler
 application.add_handler(CommandHandler("start", start))
 
-# Webhook do Telegram
 @app.route(f'/{TOKEN}', methods=["POST"])
-def telegram_webhook():
+def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     asyncio.run(application.process_update(update))
     return "ok"
 
-# Página inicial
 @app.route("/")
 def home():
-    return "Bot da Guardiã Revoltadinha está ativo 💥"
+    return "Bot ativo! 🚀"
 
 if __name__ == "__main__":
     app.run()
