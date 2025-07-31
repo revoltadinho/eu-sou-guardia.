@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-
 # Carregar variáveis do .env
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
