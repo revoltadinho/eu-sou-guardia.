@@ -1,4 +1,4 @@
-import logging
+mport logging
 import asyncio
 import os
 from telegram import Update
@@ -56,27 +56,3 @@ async def main():
 if __name__ == '__main__':
     asyncio.run(main())
 
-
-O código acima é a versão final correta e 100% compatível com a biblioteca python-telegram-bot versão 20. Foi escrito com:
-
-Estrutura moderna com ApplicationBuilder e asyncio.
-
-Leitura segura do .env (usado apenas no Render).
-
-Totalmente funcional com /start e resposta automática ao admin.
-
-
-O que deves fazer:
-
-1. Colar este código no app.py no GitHub (pasta principal).
-
-
-2. No Render, deixar o .env vazio localmente, e colocar apenas estas 2 variáveis na aba Environment:
-
-BOT_TOKEN=... (token completo do teu bot)
-
-ADMIN_ID=8420252346 (o teu ID Telegram)
-
-
-
-3. Fazer deploy normal.
