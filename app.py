@@ -16,4 +16,4 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     print("🤖 RevoltadinhoBot está online...")
-    app.run_polling() 
+    app.run_polling()
